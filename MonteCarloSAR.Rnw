@@ -2,13 +2,13 @@
 %\documentclass[12pt, legno]{article}
 
 \usepackage[doublespacing]{setspace}
-\usepackage[utf8]{inputenc} 
+\usepackage[utf8]{inputenc}
 \usepackage{graphics}
 \usepackage[english]{babel}\selectlanguage{english}
 \usepackage{float} %table repositioning
 \usepackage{mathtools}
 %\restylefloat{table}
-\usepackage{caption} 
+\usepackage{caption}
 \captionsetup[table]{skip=10pt} %space between caption and table
 %\captionsetup{singlelinecheck = false} %deactivate centered captions
 \usepackage{booktabs} % ein Paket zum setzen von qualitativ hochwertigen horizontalen Strichen in Tabellen
@@ -31,11 +31,11 @@
 % the following two packages necessary to display ">" or "<" signs in tables created with kable
 % from https://tex.stackexchange.com/questions/252119/knitr-less-greater-than-sign-displayed-as-and
 \usepackage{lmodern}
-\usepackage[T1]{fontenc} 
+\usepackage[T1]{fontenc}
 
 %solution taken from https://stackoverflow.com/questions/26003574/dplyr-mutate-use-dynamic-variable-names
 %https://www.r-bloggers.com/converting-a-string-to-a-variable-name-on-the-fly-and-vice-versa-in-r/
-  
+
   \makeatletter
 \let\@fnsymbol\@arabic
 \makeatother
@@ -43,7 +43,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   % MARGINS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  \oddsidemargin 0.0cm \topmargin -2.0cm \textwidth 16 cm \textheight 24.0cm 
+  \oddsidemargin 0.0cm \topmargin -2.0cm \textwidth 16 cm \textheight 24.0cm
 
 \renewcommand\floatpagefraction{.99}
 \renewcommand\topfraction{.99}
@@ -58,7 +58,7 @@
 
 
 <<setup, include=FALSE, cache=FALSE, echo = FALSE>>=
-  cat("\014")  
+  cat("\014")
 rm(list=ls(all=TRUE))
 
 #Sys.setenv(PATH = paste(Sys.getenv("PATH"), "C:\\MiKTeX 2.9\\miktex\\bin\\x64", sep=.Platform$path.sep))
@@ -69,7 +69,7 @@ library( knitr       )
 library( xtable      )
 library( stargazer   )
 library( readstata13 )
-library( lubridate   ) 
+library( lubridate   )
 library( tfplot      )
 library( readxl      )
 library( magrittr    )
@@ -82,7 +82,7 @@ library( dplyr       )
 library( tidyr       ) # replace_na
 library( stringr     )
 library( kableExtra  )
-library( tibble      ) 
+library( tibble      )
 library( R.utils     )
 library( ggfortify   )
 library( broom       )
@@ -102,24 +102,25 @@ library( matlib      )
 library( invgamma    )
 library( rlist       )
 library( coda        )
+library( spdep       )
 
 #set global chunk options: to be done, echo always FALSE?
 opts_knit$set(root.dir='../') #working directory, does not work without this
 #options(digits = 4) # works for figures in text, does not work for xtable
-opts_chunk$set(fig.width = 13) #fig.align = "center", out.width = '0.9\\textwidth', 
+opts_chunk$set(fig.width = 13) #fig.align = "center", out.width = '0.9\\textwidth',
 knitr::opts_chunk$set( fig.path = 'figures/' )
 knitr::opts_chunk$set( echo = FALSE, warning = FALSE, message = FALSE)
 # f <- function(x, options) {
 #   lab <- paste0(options$fig.lp, options$label)
-#   paste("\\end{kframe}\n", 
-#         "\\begin{figure}\n\\caption{", options$capT, "}\\label{", lab,"}\n", 
-#         hook_plot_tex(x, options), 
+#   paste("\\end{kframe}\n",
+#         "\\begin{figure}\n\\caption{", options$capT, "}\\label{", lab,"}\n",
+#         hook_plot_tex(x, options),
 #         "\\end{figure}\n\n\\begin{kframe}", sep = "")
 # }
 # knit_hooks$set(plot = f)
 @
-  
- 
+
+
 <<options, include=FALSE, cache=FALSE, echo = FALSE>>=
 opt_model       = list()
 opt_model$n     = 400
@@ -127,55 +128,55 @@ opt_model$phi   = 0.2
 opt_model$mu    = 10
 opt_model$sigm2 = 2
 
-opt_model$only_incpt = FALSE # TRUE # 
+opt_model$only_incpt = FALSE # TRUE #
 
 if( opt_model$only_incpt ){
   opt_model$beta = c( opt_model$mu ) %>% matrix( ncol = 1 )
 }else{
   opt_model$beta = c( opt_model$mu, rep( 1, 2 ) ) %>% matrix( ncol = 1 )
-} 
+}
 
-@  
- 
+@
+
 <<functions, include=FALSE, cache=FALSE, echo = FALSE>>=
 createWeightMatrix <- function( n ){
 # create spatial weight matrix n x n with a "rook" neighbourhood system
-# (i.e. neighbours are N, W, S, E ) 
-  
+# (i.e. neighbours are N, W, S, E )
+
   mW = matrix(0, ncol = n, nrow = n )
   i = seq( 1, n-1 )
   j = seq( 2, n   )
   ij = cbind( i, j); ij
   for( k in 1:(n-1) ){
-    
+
     mW[ ij[k,1], ij[k,2] ] = 1
     mW[ ij[k,2], ij[k,1] ] = 1
-    
-  } 
+
+  }
   i = seq(       1, n-sqrt(n) )
   j = seq( sqrt(n)+1, n   )
   ij = cbind( i, j); #ij
   for( k in 1:dim( ij )[1] ){
-    
+
     mW[ ij[k,1], ij[k,2] ] = 1
     mW[ ij[k,2], ij[k,1] ] = 1
-    
-  } 
+
+  }
   ### delete some zeros
   i = seq( sqrt(n), n - 1, sqrt(n) )
   j = i + 1
   ij = cbind( i, j);# ij
   for( k in 1:dim( ij )[1] ){
-    
+
     mW[ ij[k,1], ij[k,2] ] = 0
     mW[ ij[k,2], ij[k,1] ] = 0
-    
-  } 
+
+  }
   return( mW )
 }
-@  
-    
- 
+@
+
+
 <<weight, include=FALSE, cache=FALSE, echo = FALSE>>=
 mW = createWeightMatrix( opt_model$n )
 
@@ -184,7 +185,7 @@ eigenWrange = 1 / range( eigenW$values ); eigenWrange
 
 rankMatrix(mW, tol = NULL)
 ### normalize the weight matrix such that the largest eigenvalue is equal to one
-# mW = mW * eigenWrange[ 2 ] 
+# mW = mW * eigenWrange[ 2 ]
 
 # mWnorm = mW * eigenWrange[ 2 ]
 # eigenWnorm = eigen( mWnorm, symmetric = TRUE, only.values = TRUE, EISPACK = FALSE)
@@ -204,7 +205,7 @@ if( opt_model$only_incpt ){
   incpt
   mX  = cbind( x1, x2 )
   mX  = cbind( incpt, mX )
-} 
+}
 
 vE    <- rmvnorm( n=1, mean = rep(0, opt_model$n), sigma = mCov ) %>% t %>% as.data.frame
 vY    <- mX %*% opt_model$beta + vE
@@ -223,173 +224,177 @@ ols <- lm( formula.ols, data = dfYX ); summary( ols )
 mWlist = mat2listw( mW, style="W"  )
 summary( mWlist$neighbours )
 
-@  
- 
+@
+
 
 <<maxlik, include=FALSE, cache=FALSE, echo = FALSE>>=
 if(FALSE){
     ### style="W" and style="B"/"M" give different results
     moran.lm <- lm.morantest( ols, mWlist, alternative = "two.sided")
     moran.lm
-    
+
     ### LMtest
     LM <- lm.LMtests( ols, mWlist, test = "all"); LM
-    
+
     ### SAR model
     sar <- lagsarlm( formula.ols, data = dfYX, mWlist )
     summary( sar )
-    
-    
+
+
     ### SAR 2SLS
     sar2sls <- stsls( formula.ols, data = dfYX, mWlist )
     summary( sar2sls )
-    
-    ### SEM 
+
+    ### SEM
     sem <-errorsarlm( formula.ols, data = dfYX, mWlist)
     summary(sem)
-    
+
     ### SEM FGLS
     semfgls<-GMerrorsar( formula.ols, data = dfYX, mWlist )
     summary(semfgls)
     }
-@  
+@
 
 <<bayes, include=FALSE, cache=FALSE, echo = FALSE>>=
-eigenW = eigen( mW, symmetric = TRUE, only.values = FALSE, EISPACK = FALSE)
+BayesSAR <- function( opt, y, x, w ){
+  
+  nobs = dim( y )[1]; nobs
+  nreg = dim( x )[2]; nreg 
+  
+  mh_scale = opt$mh_scale
+  
+  ### extract eigenvalues from w
+  w.eigen = eigen( w, symmetric = TRUE, only.values = FALSE, EISPACK = FALSE)
+  w.eigen.range = 1 / range( w.eigen$values ); w.eigen.range
 
-eigenWrange = 1 / range( eigenW$values ); eigenWrange
+  ### set range of phi  
+  sPhi.low = w.eigen.range[1]
+  sPhi.hgh = w.eigen.range[2]
+  
+  ### initialize parameters
+  sPhi = 0
+  mSigmaPhiInv = diag( nobs )
+  mXSXInv      = solve( t(x) %*% x )
+  vBetaPhiHat  = mXSXInv %*% t(x) %*% y
+  vRes         = y - x %*% vBetaPhiHat
+  sSPhi2       = t( vRes ) %*% vRes
+  sLogD        = 0.5 * ( log( det( mSigmaPhiInv ) ) + log( det( mXSXInv ) ) ) - ( nobs - nreg ) / 2 * log( sSPhi2 ) ### (4.3) p. 335
+  
+  ### store simulation output
+  mc_list = vector("list", length = opt$max_iter )
+  
+  mc_iter = list()
+  mc_iter$vBeta       = 0
+  mc_iter$sSigma2     = 0
+  mc_iter$sPhi        = sPhi
+  mc_iter$mXSXInv     = mXSXInv
+  mc_iter$vBetaPhiHat = vBetaPhiHat
+  mc_iter$sSPhi2      = sSPhi2
+  mc_iter$sLogD       = sLogD
+  mc_iter$sAccept     = 1
+  
+  mc_list[[1]] = mc_iter
+  
+  autotune_list = vector("list", length = opt_mc$max_iter / 100 )
+  ### START LOOP
+  for( iter in 2:opt_mc$max_iter ){ # iter = 8
+  
+      mc_iter_old = mc_list[[ iter - 1 ]]
+  
+      sPhi = mc_iter_old$sPhi
+  
+      ### STEP 1: MC RWMH step for Phi
+      sPhiP = sPhi + rnorm( 1 ) * mh_scale
+      if( sPhiP > sPhi.hgh | sPhiP < sPhi.low ){
+        sLogDP = -Inf
+      }else{
+        mTemp = diag( nobs ) - w * sPhiP
+        mSigmaPhiInv = mTemp %*% mTemp
+        mXSXInv      = solve( t(x) %*% mSigmaPhiInv %*% x )
+        vBetaPhiHat  = mXSXInv %*% ( t(x) %*% mSigmaPhiInv %*% y )
+        vRes         = y - x %*% vBetaPhiHat
+        sSPhi2       = t( vRes ) %*% mSigmaPhiInv %*% vRes
+        sLogDP        = 0.5 * ( log( det( mSigmaPhiInv ) ) + log( det( mXSXInv ) ) ) - ( nobs - nreg ) / 2 * log( sSPhi2 ) ### (4.3) p. 335
+  
+        rm( mSigmaPhiInv )
+        rm( vRes )
+        rm( mTemp )
+      }
+  
+      ### STEP 2: CHECK IMPROVEMENT IN LOGLIK
+      if( sLogDP - sLogD > log( runif( 1 ) ) ){
+        sPhi    = sPhiP
+        sLogD   = sLogDP
+        sAccept = 1
+      }else{
+        mXSXInv      = mc_iter_old$mXSXInv
+        vBetaPhiHat  = mc_iter_old$vBetaPhiHat
+        sSPhi2       = mc_iter_old$sSPhi2
+        sAccept      = 0
+      }
+  
+      ### STEP 3: GIBBS SAMPLING FOR SIGMA2 AND BETA
+      sSigma2 = rinvgamma(1, shape = ( nobs - nreg ) / 2, rate = sSPhi2 / 2  )
+      vBeta   = vBetaPhiHat + rmvnorm( n=1, sigma = mXSXInv * sSigma2 ) %>% t
+  
+      mc_iter = list()
+      mc_iter$vBeta       = vBeta
+      mc_iter$sSigma2     = sSigma2
+      mc_iter$sPhi        = sPhi
+      mc_iter$mXSXInv     = mXSXInv
+      mc_iter$vBetaPhiHat = vBetaPhiHat
+      mc_iter$sSPhi2      = sSPhi2
+      mc_iter$sLogD       = sLogD
+      mc_iter$sAccept     = sAccept
+  
+      mc_list[[ iter ]] = mc_iter
+  
+      if( opt$autotune$execute &  !( iter %% 100 ) ){
+        sAccept_hist = lapply( mc_list, `[[`, "sAccept" ) %>% unlist %>% tail( n = 100 )
+        sAccept_rate = mean( sAccept_hist )
+        cat( "\n\n*** Iteration:", iter,"from", opt$max_iter,"***" )
+        cat( "\n*** Acceptance rate:", round( sAccept_rate * 100 ),"% ***" )
+        sAccept_rate = ifelse( sAccept_rate > 0 & sAccept_rate < 1, sAccept_rate, 0.0001 )
+        sMulti = sAccept_rate / opt$autotune$target_accept_MH;
+        mh_scale = ifelse( abs( sMulti - 1 ) > 0.1, sMulti * mh_scale, mh_scale )
+        cat( "\n*** sMulti:", sMulti," mh_scale:", mh_scale, "opt$mh_scale:",opt$mh_scale )
+        autotune_list[[ iter / 100 ]] = list( sAccept_rate = sAccept_rate, mh_scale = mh_scale )
+      }
+  
+  
+  }
+  length( mc_list )
+  mc_list       = list.remove( mc_list      , seq( 1, opt$ini_iter) )
+  autotune_list = list.remove( autotune_list, seq( 1, opt$ini_iter / 100 ) )
+  length( mc_list )
 
-phi.low = eigenWrange[1] 
-phi.hgh = eigenWrange[2] 
+  return( list( mc_list = mc_list, autotune_list = autotune_list ) )
+}
 
 opt_mc = list()
 opt_mc$ini_iter = 2000
-opt_mc$max_iter = opt_mc$ini_iter + 10000
-opt_mc$mh_scale = 0.035 
-opt_mc$autotune = FALSE #  TRUE # 
-opt_mc$target_accept_MH = 0.33
+opt_mc$max_iter = opt_mc$ini_iter + 2000
+opt_mc$mh_scale =0.035 #  1 # 
+opt_mc$autotune = list( execute = FALSE, target_accept_MH = 0.33 ) #  TRUE #
 
-mh_scale = opt_mc$mh_scale
-
-mc = list()
-mc$runif = log( runif( opt_mc$max_iter ) )
-mc$rnorm = rnorm( opt_mc$max_iter * ( dim( dfYX )[2] - 1 ) ) %>% matrix( ncol = opt_mc$max_iter )
-mc$jump  = rnorm( opt_mc$max_iter ) * mh_scale
-
-nobs = dim( dfYX )[1]; nobs
-nreg = dim( dfYX )[2] - 1; nreg
-  
 y = dfYX[, 1] %>% as.matrix
 x = dfYX[,-1] %>% as.matrix
+w = mW
+opt = opt_mc
 
-### initialize parameters
-sPhi = 0
-mSigmaPhiInv = diag( nobs )
-mXSXInv      = solve( t(x) %*% x )
-vBetaPhiHat  = mXSXInv %*% t(x) %*% y
-vRes         = y - x %*% vBetaPhiHat
-sSPhi2       = t( vRes ) %*% vRes 
-sLogD        = 0.5 * ( log( det( mSigmaPhiInv ) ) + log( det( mXSXInv ) ) ) - ( nobs - nreg ) / 2 * log( sSPhi2 ) ### (4.3) p. 335
-
-mc_list = vector("list", length = opt_mc$max_it )
-
-mc_iter = list()
-mc_iter$vBeta       = 0
-mc_iter$sSigma2     = 0
-mc_iter$sPhi        = sPhi
-mc_iter$mXSXInv     = mXSXInv
-mc_iter$vBetaPhiHat = vBetaPhiHat
-mc_iter$sSPhi2      = sSPhi2
-mc_iter$sLogD       = sLogD
-mc_iter$sAccept     = 1
-
-mc_list[[1]] = mc_iter
-
-autotune_list = vector("list", length = opt_mc$max_it / 100 )
-### START LOOP 
-for( iter in 2:opt_mc$max_iter ){ # iter = 8
-
-    mc_iter_old = mc_list[[ iter - 1 ]]
-    
-    sPhi = mc_iter_old$sPhi
-    
-    ### STEP 1: MC RWMH step for Phi
-    sPhiP = sPhi + mc$jump[iter]
-    if( sPhiP > phi.hgh | sPhiP < phi.low ){
-      sLogDP = -Inf
-    }else{
-      mTemp = diag( dim( y )[1] ) - mW * sPhiP
-      mSigmaPhiInv = mTemp %*% mTemp
-      mXSXInv      = solve( t(x) %*% mSigmaPhiInv %*% x )
-      vBetaPhiHat  = mXSXInv %*% ( t(x) %*% mSigmaPhiInv %*% y )
-      vRes         = y - x %*% vBetaPhiHat
-      sSPhi2       = t( vRes ) %*% mSigmaPhiInv %*% vRes 
-      sLogDP        = 0.5 * ( log( det( mSigmaPhiInv ) ) + log( det( mXSXInv ) ) ) - ( nobs - nreg ) / 2 * log( sSPhi2 ) ### (4.3) p. 335
-    
-      rm( mSigmaPhiInv )
-      rm( vRes )
-      rm( mTemp )
-    }
-    
-    ### STEP 2: CHECK IMPROVEMENT IN LOGLIK
-    if( sLogDP - sLogD > mc$runif[iter] ){
-      sPhi    = sPhiP
-      sLogD   = sLogDP
-      sAccept = 1
-    }else{
-      mXSXInv      = mc_iter$mXSXInv
-      vBetaPhiHat  = mc_iter$vBetaPhiHat
-      sSPhi2       = mc_iter$sSPhi2  
-      sAccept      = 0
-    }
-    
-    ### STEP 3: GIBBS SAMPLING FOR SIGMA2 AND BETA
-    sSigma2 = rinvgamma(1, shape = ( nobs - nreg ) / 2, rate = sSPhi2 / 2  )
-    vBeta   = vBetaPhiHat + rmvnorm( n=1, sigma = mXSXInv * sSigma2 ) %>% t
-    
-    mc_iter = list()
-    mc_iter$vBeta       = vBeta
-    mc_iter$sSigma2     = sSigma2
-    mc_iter$sPhi        = sPhi
-    mc_iter$mXSXInv     = mXSXInv
-    mc_iter$vBetaPhiHat = vBetaPhiHat
-    mc_iter$sSPhi2      = sSPhi2
-    mc_iter$sLogD       = sLogD
-    mc_iter$sAccept     = sAccept
-      
-    mc_list[[ iter ]] = mc_iter
-    
-    if( opt_mc$autotune &  !( iter %% 100 ) ){
-      sAccept_hist = lapply( mc_list, `[[`, "sAccept" ) %>% unlist %>% tail( n = 100 ) 
-      sAccept_rate = mean( sAccept_hist )
-      cat( "\n\n*** Iteration:", iter,"from", opt_mc$max_iter,"***" )   
-      cat( "\n*** Acceptance rate:", round( sAccept_rate * 100 ),"% ***" )   
-      sAccept_rate = ifelse( sAccept_rate > 0 & sAccept_rate < 1, sAccept_rate, 0.0001 )
-      sMulti = sAccept_rate / opt_mc$target_accept_MH; 
-      mh_scale = ifelse( abs( sMulti - 1 ) > 0.1, sMulti * mh_scale, mh_scale )
-      mc$jump  = rnorm( opt_mc$max_iter ) * mh_scale
-      cat( "\n*** sMulti:", sMulti," mh_scale:", mh_scale, "opt_mc$mh_scale:",opt_mc$mh_scale ) 
-      autotune_list[[ iter / 100 ]] = list( sAccept_rate = sAccept_rate, mh_scale = mh_scale )
-    }
-    
-
-} 
-length( mc_list )
-mc_list       = list.remove( mc_list      , seq( 1, opt_mc$ini_iter) )
-autotune_list = list.remove( autotune_list, seq( 1, opt_mc$ini_iter / 100 ) )
-length( mc_list )
+ud = BayesSAR( opt, y, x, w )
 
 ### COLLECT THE RESULTS
-sPhi    = lapply( mc_list, `[[`, "sPhi"    ) %>% unlist
-sLogD   = lapply( mc_list, `[[`, "sLogD"   ) %>% unlist
-sAccept = lapply( mc_list, `[[`, "sAccept" ) %>% unlist
-mBetaPhiHat = do.call( "cbind", lapply( mc_list, `[[`, "vBetaPhiHat" ) )
-mBeta       = do.call( "cbind", lapply( mc_list, `[[`, "vBeta" ) )
-sSigma2     = lapply( mc_list, `[[`, "sSigma2" ) %>% unlist
+sPhi    = lapply( ud$mc_list, `[[`, "sPhi"    ) %>% unlist
+sLogD   = lapply( ud$mc_list, `[[`, "sLogD"   ) %>% unlist
+sAccept = lapply( ud$mc_list, `[[`, "sAccept" ) %>% unlist
+mBetaPhiHat = do.call( "cbind", lapply( ud$mc_list, `[[`, "vBetaPhiHat" ) )
+mBeta       = do.call( "cbind", lapply( ud$mc_list, `[[`, "vBeta" ) )
+sSigma2     = lapply( ud$mc_list, `[[`, "sSigma2" ) %>% unlist
 
 
-sAccept_rate = lapply( autotune_list, `[[`, "sAccept_rate"    ) %>% unlist
-mh_scale     = lapply( autotune_list, `[[`, "mh_scale"    ) %>% unlist
+sAccept_rate = lapply( ud$autotune_list, `[[`, "sAccept_rate"    ) %>% unlist
+mh_scale     = lapply( ud$autotune_list, `[[`, "mh_scale"    ) %>% unlist
 
 plot( mh_scale, sAccept_rate )
 
@@ -407,12 +412,14 @@ acf( sPhi )
 raft = raftery.diag( sPhi, q=0.025, r=0.005, s=0.95, converge.eps=0.001)
 print( raft ); raft$resmatrix
 
-gelman.diag( as.mcmc( sPhi ), confidence = 0.95, transform=FALSE, autoburnin=TRUE )
+#gelman.diag( as.mcmc( sPhi ), confidence = 0.95, transform=FALSE, autoburnin=TRUE )
 heidel.diag( as.mcmc( sPhi ), eps=0.1, pvalue=0.05)
 geweke.diag( as.mcmc( sPhi ), frac1=0.1, frac2=0.5)
 
-@  
 
-\bibliographystyle{chicago}   
+
+@
+
+\bibliographystyle{chicago}
 
 \end{document}
